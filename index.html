@@ -112,6 +112,16 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
 .pick{width:100%;display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 12px;border-radius:12px;text-align:left}
 .pick.on{background:var(--sel);font-weight:700}
 .welcome{padding:40px 4px;text-align:center}
+.widgetbtn{display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;min-height:48px;padding:0 14px;border:1px solid var(--border);border-radius:14px;font-size:14px;font-weight:600;color:var(--soft)}
+.seg{display:flex;gap:2px;background:var(--surface2);border-radius:12px;padding:3px;margin:12px 0 6px}
+.seg button{flex:1;height:36px;border-radius:9px;font-size:14px;font-weight:600;color:var(--soft)}
+.seg button.on{background:var(--primary);color:var(--onprimary)}
+.steps{margin:10px 0 0;padding-left:20px;font-size:14px;line-height:1.5;color:var(--soft)}
+.steps li{margin-bottom:8px}
+.steps b{color:var(--text)}
+.act{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:48px;margin-top:10px;border-radius:14px;font-size:15px;font-weight:700}
+.act.fill{background:var(--primary);color:var(--onprimary)}
+.act.line{border:1px solid var(--border);color:var(--text)}
 .welcome .big{font-size:24px;margin-bottom:8px}
 </style>
 </head>
@@ -419,12 +429,53 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
       '<div class="status"><span class="live' + (live ? ' on' : '') + '"></span>' +
       (lastErr ? esc(lastErr) : (live ? 'In tempo reale' : 'Senza connessione: ultimi dati salvati') + (data.updated ? ' · aggiornato ' + ago(data.updated) : '')) + '</div>';
     var body = tab === 'pres' ? presence() : tab === 'serv' ? services() : tab === 'lic' ? leaves() : calendar();
-    app.innerHTML = head + body + '<div class="ro" style="margin-top:22px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Sola lettura · i dati li aggiorna il responsabile</div>';
+    app.innerHTML = head + body + '<div class="ro" style="margin-top:22px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Sola lettura · i dati li aggiorna il responsabile</div>' +
+      '<button class="widgetbtn" id="widgetBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="17" height="7" rx="2"/></svg>Widget per la schermata Home</button>';
     var nav = '';
     TABS.forEach(function (t) {
       nav += '<button data-tab="' + t[0] + '"' + (t[0] === tab ? ' class="on"' : '') + '><svg viewBox="0 0 24 24">' + t[2] + '</svg>' + t[1] + '<span class="bar"></span></button>';
     });
     document.getElementById('nav').innerHTML = nav;
+  }
+
+  // ------------------------------------------------------------ widget per la schermata Home
+  function myLink() { return location.href.split('#')[0]; }
+  function widgetSheet(os) {
+    var h = '<h3>Widget</h3><div class="t2">Aperture, chiusure e reperibilità di oggi e dei prossimi giorni, sempre in vista sulla schermata Home.</div>' +
+      '<div class="seg"><button data-os="ios"' + (os === 'ios' ? ' class="on"' : '') + '>iPhone</button><button data-os="android"' + (os === 'android' ? ' class="on"' : '') + '>Android</button></div>';
+    if (os === 'ios') {
+      h += '<ol class="steps">' +
+        '<li>Scarica dall\'App Store l\'app gratuita <b>Scriptable</b>.</li>' +
+        '<li>Tocca qui sotto <b>Copia il codice</b>. Apri Scriptable, tocca <b>+</b> in alto, incolla e tocca <b>Fine</b>. Se vuoi, rinomina lo script «Turni».</li>' +
+        '<li>Tocca <b>Copia il mio link</b>.</li>' +
+        '<li>Sulla schermata Home tieni premuto uno spazio vuoto → <b>+</b> (o <b>Modifica</b> → <b>Aggiungi widget</b>) → <b>Scriptable</b> → scegli la misura media → <b>Aggiungi widget</b>.</li>' +
+        '<li>Tieni premuto il widget → <b>Modifica widget</b>: in <b>Script</b> scegli «Turni», in <b>Parameter</b> incolla il link. Fatto.</li></ol>' +
+        '<button class="act fill" data-copy="code">Copia il codice</button><button class="act line" data-copy="link">Copia il mio link</button>' +
+        '<div class="t2" style="margin-top:12px">Il widget si aggiorna da solo circa ogni mezz\'ora; toccandolo si apre questa pagina.</div>';
+    } else {
+      h += '<ol class="steps">' +
+        '<li>Installa l\'app <b>Turni Circolo</b> che ti manda il responsabile oppure scaricala dal pulsante qui sotto. Se Android lo chiede, consenti l\'installazione da questa fonte.</li>' +
+        '<li>Tocca qui sotto <b>Copia il mio link</b>, apri Turni Circolo e tocca <b>Incolla il link copiato</b> → <b>Salva e apri</b>.</li>' +
+        '<li>Sulla schermata Home tieni premuto uno spazio vuoto → <b>Widget</b> → <b>Turni Circolo</b> e trascinalo dove vuoi. Puoi allargarlo per vedere i giorni per intero.</li></ol>' +
+        '<button class="act fill" data-copy="link">Copia il mio link</button>' +
+        '<a class="act line" href="TurniCircolo.apk" download style="text-decoration:none">Scarica Turni Circolo (Android)</a>' +
+        '<div class="t2" style="margin-top:12px">L\'app mostra anche questa pagina e tiene aggiornato il widget (ogni mezz\'ora e ogni volta che la apri).</div>';
+    }
+    openSheet(h);
+    // il codice si prepara subito: su iPhone si può copiare solo nello stesso tocco, senza attese
+    if (os === 'ios' && !widgetCode) fetch('widget-iphone.js', { cache: 'no-cache' }).then(function (r) { return r.text(); }).then(function (t) { widgetCode = t; }).catch(function () { });
+  }
+  var widgetCode = '';
+  function copyThing(what, btn) {
+    var done = function () { var old = btn.textContent; btn.textContent = 'Copiato ✓'; setTimeout(function () { btn.textContent = old; }, 1800); };
+    var fail = function () { btn.textContent = 'Non riesco a copiare: tieni premuto e copia a mano'; };
+    var write = function (text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, fail);
+      else fail();
+    };
+    if (what === 'link') write(myLink());
+    else if (widgetCode) write(widgetCode);
+    else btn.textContent = 'Un attimo, riprova tra un secondo';
   }
 
   function openSheet(html) {
@@ -450,6 +501,9 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
       return;
     }
     if (t.dataset.me !== undefined) { me = t.dataset.me; store('tm_me', me); closeSheet(); render(); }
+    if (t.id === 'widgetBtn') { widgetSheet(/iPhone|iPad|iPod/.test(navigator.userAgent) ? 'ios' : 'android'); return; }
+    if (t.dataset.os) { widgetSheet(t.dataset.os); return; }
+    if (t.dataset.copy) { copyThing(t.dataset.copy, t); return; }
   });
 
   // ------------------------------------------------------------ avvio
