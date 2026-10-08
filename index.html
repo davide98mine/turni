@@ -112,6 +112,22 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
 .pick{width:100%;display:flex;align-items:center;gap:12px;min-height:52px;padding:8px 12px;border-radius:12px;text-align:left}
 .pick.on{background:var(--sel);font-weight:700}
 .welcome{padding:40px 4px;text-align:center}
+.req{border:1px solid var(--border);border-radius:16px;padding:14px;margin-top:12px}
+.req h4{margin:0;font-size:15px;font-weight:700}
+.pillst{display:inline-block;padding:2px 9px;border-radius:10px;font-size:12px;font-weight:700}
+.st-attesa{color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,transparent)}
+.st-accettata{color:var(--open);background:color-mix(in srgb,var(--open) 16%,transparent)}
+.st-rifiutata{color:var(--danger);background:color-mix(in srgb,var(--danger) 16%,transparent)}
+.st-ritirata{color:var(--muted);background:var(--surface2)}
+.banner{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:10px 12px;border-radius:12px;font-size:13.5px;
+  background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--text)}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opts button{height:36px;padding:0 13px;border-radius:18px;border:1px solid var(--border);font-size:13.5px;font-weight:500;color:var(--soft)}
+.opts button.on{background:var(--primary);border-color:var(--primary);color:var(--onprimary);font-weight:700}
+.fl{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px}
+.inp{width:100%;min-height:46px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font:inherit;font-size:15px}
+.two{display:flex;gap:10px}.two>div{flex:1;min-width:0}
+.msg{margin-top:12px;font-size:13.5px;color:var(--danger);font-weight:600}
 .widgetbtn{display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;min-height:48px;padding:0 14px;border:1px solid var(--border);border-radius:14px;font-size:14px;font-weight:600;color:var(--soft)}
 .seg{display:flex;gap:2px;background:var(--surface2);border-radius:12px;padding:3px;margin:12px 0 6px}
 .seg button{flex:1;height:36px;border-radius:9px;font-size:14px;font-weight:600;color:var(--soft)}
@@ -386,7 +402,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
     var today = key(new Date());
     var all = list(data.leaves).filter(function (l) { return !filterP || l.p === filterP; })
       .sort(function (a, b) { return keyOf(a.f) - keyOf(b.f); });
-    var h = personFilter(), groups = [['In corso', []], ['Prossime', []], ['Passate', []]];
+    var h = requestsBlock() + personFilter(), groups = [['In corso', []], ['Prossime', []], ['Passate', []]];
     all.forEach(function (l) {
       var a = keyOf(l.f), b = l.t ? keyOf(l.t) : a;
       groups[a <= today && b >= today ? 0 : a > today ? 1 : 2][1].push(l);
@@ -427,7 +443,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
       TABS.filter(function (t) { return t[0] === tab; })[0][1] + '</h1></div>' +
       '<button class="me" id="meBtn">' + (me ? dot(me, 8) + esc(first(me)) : 'Chi sei?') + '</button></div>' +
       '<div class="status"><span class="live' + (live ? ' on' : '') + '"></span>' +
-      (lastErr ? esc(lastErr) : (live ? 'In tempo reale' : 'Senza connessione: ultimi dati salvati') + (data.updated ? ' · aggiornato ' + ago(data.updated) : '')) + '</div>';
+      (lastErr ? esc(lastErr) : (live ? 'In tempo reale' : 'Senza connessione: ultimi dati salvati') + (data.updated ? ' · aggiornato ' + ago(data.updated) : '')) + '</div>' + pendingBanner();
     var body = tab === 'pres' ? presence() : tab === 'serv' ? services() : tab === 'lic' ? leaves() : calendar();
     app.innerHTML = head + body + '<div class="ro" style="margin-top:22px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Sola lettura · i dati li aggiorna il responsabile</div>' +
       '<button class="widgetbtn" id="widgetBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="17" height="7" rx="2"/></svg>Widget per la schermata Home</button>';
@@ -436,6 +452,145 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
       nav += '<button data-tab="' + t[0] + '"' + (t[0] === tab ? ' class="on"' : '') + '><svg viewBox="0 0 24 24">' + t[2] + '</svg>' + t[1] + '<span class="bar"></span></button>';
     });
     document.getElementById('nav').innerHTML = nav;
+  }
+
+  // ------------------------------------------------------------ richieste di licenza
+  // Il collaboratore entra in modo anonimo (Firebase Authentication) per poter scrivere solo le proprie richieste.
+  var myReqs = [], form = { ty: '', u: 'giorni', f: '', t: '', nota: '', msg: '' }, reqBusy = false;
+  function reqOn() { return !!(data && data.req && data.key && DB && KEY); }
+  function authToken() {
+    var saved = null;
+    try { saved = JSON.parse(store('tm_auth') || 'null'); } catch (e) { }
+    if (saved && saved.exp > Date.now() + 60000) return Promise.resolve(saved);
+    var k = encodeURIComponent(data.key);
+    var req = saved && saved.refresh
+      ? fetch('https://securetoken.googleapis.com/v1/token?key=' + k, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'grant_type=refresh_token&refresh_token=' + encodeURIComponent(saved.refresh) })
+          .then(function (r) { if (!r.ok) throw new Error('refresh'); return r.json(); })
+          .then(function (j) { return { id: j.id_token, refresh: j.refresh_token, uid: j.user_id, exp: Date.now() + (+j.expires_in || 3600) * 1000 }; })
+      : Promise.reject(new Error('nuovo'));
+    return req.catch(function () {
+      return fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + k, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"returnSecureToken":true}' })
+        .then(function (r) { if (!r.ok) throw new Error('anon'); return r.json(); })
+        .then(function (j) { return { id: j.idToken, refresh: j.refreshToken, uid: j.localId, exp: Date.now() + (+j.expiresIn || 3600) * 1000 }; });
+    }).then(function (a) { store('tm_auth', JSON.stringify(a)); return a; });
+  }
+  function reqUrl(path, a) { return DB + '/richieste/' + encodeURIComponent(KEY) + path + '.json?auth=' + encodeURIComponent(a.id); }
+  function loadMyRequests() {
+    if (!reqOn() || !me) return;
+    authToken().then(function (a) {
+      return fetch(reqUrl('', a) + '&orderBy=' + encodeURIComponent('"p"') + '&equalTo=' + encodeURIComponent(JSON.stringify(me)));
+    }).then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); }).then(function (j) {
+      var out = [];
+      Object.keys(j || {}).forEach(function (id) { var r = j[id]; if (r && r.p === me) { r.id = id; out.push(r); } });
+      out.sort(function (a, b) { return (b.creata || 0) - (a.creata || 0); });
+      var changed = JSON.stringify(out) !== JSON.stringify(myReqs);
+      myReqs = out;
+      if (changed) render();
+    }).catch(function () { });
+  }
+  function overlapR(a, b) { return keyOf(a.f) <= keyOf(b.t || b.f) && keyOf(b.f) <= keyOf(a.t || a.f); }
+  var STATI = { attesa: 'In verifica', accettata: 'Accettata', rifiutata: 'Rifiutata', ritirata: 'Ritirata' };
+  function periodTxt(r) { return !r.t || r.t === r.f ? 'il ' + short(r.f) : 'dal ' + short(r.f) + ' al ' + short(r.t); }
+  function modeTxt(u) { return u === 'ore' ? 'a ore' : u === 'misto' ? 'misto' : 'a giorni'; }
+  function pendingBanner() {
+    if (!reqOn() || !me) return '';
+    var n = myReqs.filter(function (r) { return r.stato === 'attesa'; }).length;
+    if (!n) return '';
+    return '<div class="banner">⏳<div>' + (n === 1 ? 'Hai una richiesta di licenza in verifica' : 'Hai ' + n + ' richieste di licenza in verifica') +
+      ': il responsabile non ha ancora risposto.</div></div>';
+  }
+  function requestsBlock() {
+    if (!reqOn()) return '';
+    var h = '<div class="req"><h4>Richieste di licenza</h4>';
+    if (!me) return h + '<div class="t2" style="margin-top:4px">Per chiedere una licenza tocca prima «Chi sei?» e scegli il tuo nome.</div>' +
+      '<button class="act fill" id="askBtn">Scegli chi sei</button></div>';
+    h += '<div class="t2" style="margin-top:4px">Le invii al responsabile, che le accetta o le rifiuta. Qui vedi a che punto sono.</div>' +
+      '<button class="act fill" id="askBtn">Chiedi una licenza</button>';
+    myReqs.slice(0, 12).forEach(function (r) {
+      h += '<div class="row top" style="padding:12px 0"><div class="grow"><div class="t1">' + esc(r.ty) + '</div><div class="t2">' + esc(periodTxt(r)) + ' · ' + modeTxt(r.u) +
+        (r.nota ? '<br>«' + esc(r.nota) + '»' : '') +
+        (r.stato === 'rifiutata' && r.motivo ? '<br><b style="color:var(--danger)">Motivo: ' + esc(r.motivo) + '</b>' : '') +
+        (r.stato === 'attesa' ? '<br>In fase di verifica: aspetta la risposta del responsabile.' : '') + '</div>' +
+        (r.stato === 'attesa' ? '<button class="act line" style="height:38px;font-size:13px;margin-top:8px" data-withdraw="' + esc(r.id) + '">Ritira la richiesta</button>' : '') +
+        '</div><span class="pillst st-' + esc(r.stato) + '">' + (STATI[r.stato] || esc(r.stato)) + '</span></div>';
+    });
+    return h + '</div>';
+  }
+  /** Controlli prima dell'invio: niente doppioni in verifica, niente giorni già in licenza, al massimo una seconda richiesta dopo un rifiuto. */
+  function checkRequest(r) {
+    var today = key(new Date());
+    if (!r.ty) return 'Scegli il tipo di licenza.';
+    if (!r.f || !r.t) return 'Indica il primo e l\'ultimo giorno.';
+    if (keyOf(r.t) < keyOf(r.f)) return 'L\'ultimo giorno viene prima del primo.';
+    if (keyOf(r.f) < today) return 'Non si può chiedere una licenza per giorni già passati.';
+    if ((parse(r.t) - parse(r.f)) / 864e5 > 92) return 'Massimo tre mesi per richiesta.';
+    var mine = myReqs.filter(function (x) { return overlapR(x, r); });
+    var pend = mine.filter(function (x) { return x.stato === 'attesa'; })[0];
+    if (pend) return 'Hai già una richiesta in verifica per questi giorni (' + pend.ty + ' ' + periodTxt(pend) + '). Aspetta la risposta del responsabile.';
+    if (mine.some(function (x) { return x.stato === 'accettata'; })) return 'Per questi giorni hai già una licenza accettata.';
+    var regd = list(data.leaves).filter(function (l) { return l.p === me && overlapR(l, r); })[0];
+    if (regd) return 'Per questi giorni risulti già in licenza (' + regd.ty + ' ' + periodTxt(regd) + ').';
+    var rej = mine.filter(function (x) { return x.stato === 'rifiutata'; }).length;
+    if (rej >= 2) return 'Una richiesta per questi giorni è già stata rifiutata due volte: parlane direttamente con il responsabile.';
+    return '';
+  }
+  function requestSheet() {
+    var types = list(data.leaveTypes);
+    if (!form.ty && types.length) form.ty = types[0];
+    var h = '<h3>Chiedi una licenza</h3><div class="t2">A nome di <b>' + esc(me) + '</b>. Il responsabile riceve la richiesta e la accetta o la rifiuta.</div>';
+    h += '<div class="fl">Tipo di licenza</div><div class="opts">' + types.map(function (t) {
+      return '<button data-rty="' + esc(t) + '"' + (form.ty === t ? ' class="on"' : '') + '>' + esc(t) + '</button>'; }).join('') + '</div>';
+    h += '<div class="fl">Come scaricarla</div><div class="opts">' + [['giorni', 'A giorni'], ['ore', 'A ore'], ['misto', 'Misto']].map(function (m) {
+      return '<button data-ru="' + m[0] + '"' + (form.u === m[0] ? ' class="on"' : '') + '>' + m[1] + '</button>'; }).join('') + '</div>';
+    h += '<div class="two"><div><div class="fl">Dal</div><input class="inp" type="date" id="rf" value="' + esc(form.f) + '"></div>' +
+      '<div><div class="fl">Al</div><input class="inp" type="date" id="rt" value="' + esc(form.t) + '"></div></div>';
+    h += '<div class="fl">Nota (facoltativa)</div><textarea class="inp" id="rn" rows="2" maxlength="400" placeholder="Es. visita medica, matrimonio…">' + esc(form.nota) + '</textarea>';
+    var rej = form.f && form.t ? myReqs.filter(function (x) { return x.stato === 'rifiutata' && overlapR(x, { f: isoToDmy(form.f), t: isoToDmy(form.t) }); }).length : 0;
+    if (rej === 1) h += '<div class="banner">Per questi giorni una richiesta è già stata rifiutata: puoi riproporla una sola volta.</div>';
+    if (form.msg) h += '<div class="msg">' + esc(form.msg) + '</div>';
+    h += '<button class="act fill" id="sendReq">Invia richiesta</button>';
+    openSheet(h);
+    ['rf', 'rt', 'rn'].forEach(function (id) {
+      var el = document.getElementById(id);
+      el.addEventListener('change', function () {
+        form.f = document.getElementById('rf').value; form.t = document.getElementById('rt').value; form.nota = document.getElementById('rn').value;
+        if (id === 'rf' && form.f && (!form.t || form.t < form.f)) { form.t = form.f; document.getElementById('rt').value = form.t; }
+      });
+    });
+  }
+  function isoToDmy(v) { var p = String(v || '').split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : ''; }
+  function sendRequest(btn) {
+    if (reqBusy) return;
+    form.f = document.getElementById('rf').value; form.t = document.getElementById('rt').value; form.nota = document.getElementById('rn').value.trim();
+    var r = { p: me, ty: form.ty, u: form.u, f: isoToDmy(form.f), t: isoToDmy(form.t || form.f) };
+    var err = checkRequest(r);
+    if (err) { form.msg = err; requestSheet(); return; }
+    reqBusy = true; btn.textContent = 'Invio…';
+    authToken().then(function (a) {
+      var body = { uid: a.uid, p: r.p, ty: r.ty, u: r.u, f: r.f, t: r.t, stato: 'attesa', creata: { '.sv': 'timestamp' } };
+      if (form.nota) body.nota = form.nota.slice(0, 400);
+      return fetch(reqUrl('', a), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    }).then(function (res) {
+      reqBusy = false;
+      if (!res.ok) throw new Error(res.status);
+      form = { ty: form.ty, u: form.u, f: '', t: '', nota: '', msg: '' };
+      closeSheet();
+      loadMyRequests();
+      openSheet('<h3>Richiesta inviata</h3><div class="t2">Il responsabile la vedrà nella sua app. Finché non risponde la trovi «In verifica» nella sezione Licenze.</div>' +
+        '<button class="act fill" id="sheetOk">Ok</button>');
+    }).catch(function (e) {
+      reqBusy = false;
+      form.msg = 'Invio non riuscito. Controlla la connessione e riprova. Se il problema continua, avvisa il responsabile (richieste non attive).';
+      requestSheet();
+    });
+  }
+  function withdrawRequest(id, btn) {
+    btn.textContent = 'Ritiro…';
+    authToken().then(function (a) {
+      return fetch(reqUrl('/' + encodeURIComponent(id), a), { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ stato: 'ritirata' }) });
+    }).then(function (r) { if (!r.ok) throw new Error(r.status); loadMyRequests(); })
+      .catch(function () { btn.textContent = 'Non riuscito: riprova'; });
   }
 
   // ------------------------------------------------------------ widget per la schermata Home
@@ -504,7 +659,13 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
       openSheet(h);
       return;
     }
-    if (t.dataset.me !== undefined) { me = t.dataset.me; store('tm_me', me); closeSheet(); render(); }
+    if (t.dataset.me !== undefined) { me = t.dataset.me; store('tm_me', me); myReqs = []; closeSheet(); render(); loadMyRequests(); }
+    if (t.id === 'askBtn') { if (!me) { document.getElementById('meBtn').click(); return; } requestSheet(); return; }
+    if (t.dataset.rty !== undefined) { form.ty = t.dataset.rty; requestSheet(); return; }
+    if (t.dataset.ru !== undefined) { form.u = t.dataset.ru; requestSheet(); return; }
+    if (t.id === 'sendReq') { sendRequest(t); return; }
+    if (t.dataset.withdraw) { withdrawRequest(t.dataset.withdraw, t); return; }
+    if (t.id === 'sheetOk') { closeSheet(); render(); return; }
     if (t.id === 'widgetBtn') { widgetSheet(/iPhone|iPad|iPod/.test(navigator.userAgent) ? 'ios' : 'android'); return; }
     if (t.dataset.os) { widgetSheet(t.dataset.os); return; }
     if (t.dataset.copy) { copyThing(t.dataset.copy, t); return; }
@@ -512,7 +673,12 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
 
   // ------------------------------------------------------------ avvio
   if (DEMO && window.TM_DEMO_DATA) { data = window.TM_DEMO_DATA; live = true; render(); }
-  else if (DB && KEY) { data = cached(); render(); connect(); }
+  else if (DB && KEY) {
+    data = cached(); render(); connect();
+    setTimeout(loadMyRequests, 1500);
+    setInterval(function () { if (!document.hidden) loadMyRequests(); }, 60000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) loadMyRequests(); });
+  }
   else render();
   if ('serviceWorker' in navigator && location.protocol === 'https:' && !DEMO) navigator.serviceWorker.register('sw.js').catch(function () { });
 })();
