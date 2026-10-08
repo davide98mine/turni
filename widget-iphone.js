@@ -1,10 +1,18 @@
 // Turni Circolo · widget per iPhone (app gratuita «Scriptable»)
 // Mostra aperture, chiusure e reperibilità di oggi e dei giorni seguenti, come il widget di Turni Manager.
 // Il link dei turni va messo nel «Parameter» del widget (tieni premuto il widget → Modifica widget → Parameter).
-// In alternativa incollalo qui sotto tra le virgolette.
+// Dopo il link, separate da uno spazio, si possono aggiungere queste parole:
+//   domani        → mostra domani e dopodomani (senza: oggi e domani)
+//   aperture  chiusure  reperibilità   → mostra solo quelle (senza: tutte e tre)
+// Esempio:  https://…&k=…  domani aperture
+// In alternativa incolla il link qui sotto tra le virgolette.
 const LINK_QUI = "";
 
-const LINK = ((args.widgetParameter || "").trim() || LINK_QUI).trim();
+const PARAM = ((args.widgetParameter || "").trim() || LINK_QUI).trim();
+const LINK = (PARAM.match(/https?:\/\/\S+/) || [""])[0];
+const PAROLE = PARAM.replace(LINK, " ").toLowerCase();
+const DA_DOMANI = /\bdomani\b/.test(PAROLE);
+const SCELTI = [["A", /apertur/], ["C", /chiusur/], ["R", /reperibil/]].filter(([, re]) => re.test(PAROLE)).map(([s]) => s);
 const GIORNI = ["dom", "lun", "mar", "mer", "gio", "ven", "sab"];
 const MESI = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
 const TIPI = [["A", "Apertura"], ["C", "Chiusura"], ["R", "Reperibilità"]];
@@ -48,7 +56,8 @@ function giorno(w, d, data, titolo, compatto) {
   const giornoData = dmy(data);
   const turni = lista(d.shifts).filter(s => s.d === giornoData);
   let righe = 0;
-  for (const [sigla, nome] of TIPI) {
+  const tipi = TIPI.filter(([sigla]) => !SCELTI.length || SCELTI.includes(sigla));
+  for (const [sigla, nome] of tipi) {
     const chi = turni.filter(s => s.t === sigla).map(s => s.p);
     if (!chi.length) continue;
     righe++;
@@ -57,7 +66,7 @@ function giorno(w, d, data, titolo, compatto) {
     const pallino = r.addText("● ");
     pallino.font = Font.systemFont(compatto ? 10 : 11);
     pallino.textColor = coloreDi(d, chi[0]);
-    const tipo = r.addText(nome + " ");
+    const tipo = r.addText(tipi.length === 1 ? "" : nome + " ");
     tipo.font = Font.systemFont(compatto ? 11 : 12);
     tipo.textColor = GRIGIO;
     const nomi = r.addText(chi.join(", "));
@@ -75,7 +84,7 @@ function giorno(w, d, data, titolo, compatto) {
 
 function etichetta(data, i) {
   const base = GIORNI[data.getDay()] + " " + data.getDate() + " " + MESI[data.getMonth()];
-  return (i === 0 ? "Oggi · " : i === 1 ? "Domani · " : "") + (i > 1 ? base.charAt(0).toUpperCase() + base.slice(1) : base);
+  return (i === 0 ? "Oggi · " : i === 1 ? "Domani · " : i === 2 ? "Dopodomani · " : "") + (i > 2 ? base.charAt(0).toUpperCase() + base.slice(1) : base);
 }
 
 async function crea() {
@@ -98,9 +107,10 @@ async function crea() {
   const famiglia = config.widgetFamily || "medium";
   const quanti = famiglia === "small" ? 1 : famiglia === "large" || famiglia === "extraLarge" ? 4 : 2;
   const oggi = new Date();
+  const primo = DA_DOMANI ? 1 : 0;
   for (let i = 0; i < quanti; i++) {
-    const data = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate() + i);
-    giorno(w, d, data, etichetta(data, i), famiglia !== "large");
+    const data = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate() + primo + i);
+    giorno(w, d, data, etichetta(data, primo + i), famiglia !== "large");
     if (i < quanti - 1) w.addSpacer(8);
   }
   w.addSpacer();
