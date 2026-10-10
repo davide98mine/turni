@@ -128,6 +128,16 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
 .inp{width:100%;min-height:46px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font:inherit;font-size:15px}
 .two{display:flex;gap:10px}.two>div{flex:1;min-width:0}
 .msg{margin-top:12px;font-size:13.5px;color:var(--danger);font-weight:600}
+.board{display:flex;gap:12px;align-items:flex-start;margin-top:14px;padding:12px 4px 12px 14px;border-radius:14px;
+  background:color-mix(in srgb,var(--service) 12%,transparent);border:1px solid color-mix(in srgb,var(--service) 38%,transparent)}
+.board svg{flex:none;margin-top:2px;color:var(--service)}
+.board .grow{flex:1;min-width:0}
+.board .x{flex:none;width:40px;height:40px;margin:-8px 0 -8px 0;border-radius:20px;font-size:22px;line-height:1;color:var(--muted)}
+.changes{margin-top:14px;padding:12px 14px 14px;border-radius:14px;border:1px solid color-mix(in srgb,var(--warn) 45%,transparent);
+  background:color-mix(in srgb,var(--warn) 9%,transparent)}
+.changes .ln{display:flex;gap:10px;align-items:baseline;padding:6px 0;font-size:14px}
+.changes .sg{flex:none;width:16px;font-weight:800;text-align:center}
+.chgdot{width:6px;height:6px;border-radius:3px;background:var(--warn);flex:none}
 .widgetbtn{display:flex;align-items:center;gap:10px;width:100%;margin-top:12px;min-height:48px;padding:0 14px;border:1px solid var(--border);border-radius:14px;font-size:14px;font-weight:600;color:var(--soft)}
 .seg{display:flex;gap:2px;background:var(--surface2);border-radius:12px;padding:3px;margin:12px 0 6px}
 .seg button{flex:1;height:36px;border-radius:9px;font-size:14px;font-weight:600;color:var(--soft)}
@@ -295,6 +305,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
       // giorno per giorno con setDate (non +24 ore: con il cambio dell'ora un giorno può durarne 23 o 25)
       for (var g = 0; x && key(x) <= end && g < 62; g++) { svc[key(x)] = 1; x.setDate(x.getDate() + 1); }
     });
+    var chg = changedDays();
     var h = monthBar() + personFilter() + '<div class="grid">';
     ['L','M','M','G','V','S','D'].forEach(function (d) { h += '<div class="dow">' + d + '</div>'; });
     for (var i = 0; i < firstDow; i++) h += '<div></div>';
@@ -302,7 +313,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
       var k = y * 10000 + (m + 1) * 100 + d, dow = (firstDow + d - 1) % 7, info = dayInfo(k) || {};
       var sh = shiftsOn(k).filter(function (s) { return !filterP || s.p === filterP; });
       var cls = 'cell' + (k === today ? ' today' : '') + (k === selKey ? ' sel' : '') + (dow >= 5 ? ' we' : '') + (info.cl ? ' closed' : '');
-      h += '<button class="' + cls + '" data-day="' + k + '"><span class="n"><b>' + d + '</b>' + (svc[k] ? '<span class="sd"></span>' : '') + '</span>';
+      h += '<button class="' + cls + '" data-day="' + k + '"><span class="n"><b>' + d + '</b>' + (chg[k] ? '<span class="chgdot" title="Cambiato"></span>' : svc[k] ? '<span class="sd"></span>' : '') + '</span>';
       sh.slice(0, sh.length > 3 ? 2 : 3).forEach(function (s) { h += pill(s); });
       if (sh.length > 3) h += '<span class="tiny">+' + (sh.length - 2) + '</span>';
       if (info.cl) h += '<span class="tiny">chiuso</span>';
@@ -310,7 +321,8 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
       h += '</button>';
     }
     h += '</div><div class="legend"><span><i style="background:color-mix(in srgb,var(--soft) 35%,transparent)"></i>apre</span><span><i style="box-shadow:inset 0 0 0 1.2px var(--soft)"></i>chiude</span>' +
-      '<span><i style="background:var(--soft)"></i>reperibile</span><span><span class="dot" style="width:4px;height:4px;background:var(--soft);margin-right:6px;vertical-align:2px"></span>servizi</span></div>';
+      '<span><i style="background:var(--soft)"></i>reperibile</span><span><span class="dot" style="width:4px;height:4px;background:var(--soft);margin-right:6px;vertical-align:2px"></span>servizi</span>' +
+      (Object.keys(chg).length ? '<span><span class="chgdot" style="display:inline-block;margin-right:6px;vertical-align:1px"></span>cambiato per te</span>' : '') + '</div>';
     h += dayDetail(selKey || today);
     if (me) h += myNext();
     return h;
@@ -443,7 +455,7 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
       TABS.filter(function (t) { return t[0] === tab; })[0][1] + '</h1></div>' +
       '<button class="me" id="meBtn">' + (me ? dot(me, 8) + esc(first(me)) : 'Chi sei?') + '</button></div>' +
       '<div class="status"><span class="live' + (live ? ' on' : '') + '"></span>' +
-      (lastErr ? esc(lastErr) : (live ? 'In tempo reale' : 'Senza connessione: ultimi dati salvati') + (data.updated ? ' · aggiornato ' + ago(data.updated) : '')) + '</div>' + pendingBanner();
+      (lastErr ? esc(lastErr) : (live ? 'In tempo reale' : 'Senza connessione: ultimi dati salvati') + (data.updated ? ' · aggiornato ' + ago(data.updated) : '')) + '</div>' + boardBanner() + changesCard() + pendingBanner();
     var body = tab === 'pres' ? presence() : tab === 'serv' ? services() : tab === 'lic' ? leaves() : calendar();
     app.innerHTML = head + body + '<div class="ro" style="margin-top:22px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Sola lettura · i dati li aggiorna il responsabile</div>' +
       '<button class="widgetbtn" id="widgetBtn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="17" height="7" rx="2"/></svg>Widget per la schermata Home</button>';
@@ -493,6 +505,61 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
   var STATI = { attesa: 'In verifica', accettata: 'Accettata', rifiutata: 'Rifiutata', ritirata: 'Ritirata' };
   function periodTxt(r) { return !r.t || r.t === r.f ? 'il ' + short(r.f) : 'dal ' + short(r.f) + ' al ' + short(r.t); }
   function modeTxt(u) { return u === 'ore' ? 'a ore' : u === 'misto' ? 'misto' : 'a giorni'; }
+  // ------------------------------------------------------------ avviso in bacheca
+  function boardBanner() {
+    var b = data && data.board;
+    if (!b || !b.t) return '';
+    if (b.u && key(new Date()) > +b.u) return '';                       // scaduto
+    if (store('tm_board_closed_' + KEY) === String(b.id)) return '';        // chiuso con la ×: ricompare solo se cambia
+    return '<div class="board"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18 11v2h4v-2h-4zm-2 6.61c.96.71 2.21 1.65 3.2 2.39.4-.53.8-1.07 1.2-1.6-.99-.74-2.24-1.68-3.2-2.4-.4.54-.8 1.08-1.2 1.61zM20.4 5.6c-.4-.53-.8-1.07-1.2-1.6-.99.74-2.24 1.68-3.2 2.4.4.53.8 1.07 1.2 1.6.96-.72 2.21-1.65 3.2-2.4zM4 9c-1.1 0-2 .9-2 2v2c0 1.1.9 2 2 2h1v4h2v-4h1l5 3V6L8 9H4zm11.5 3c0-1.33-.58-2.53-1.5-3.35v6.69c.92-.81 1.5-2.01 1.5-3.34z"/></svg>' +
+      '<div class="grow"><div class="over" style="color:var(--service)">Avviso</div><div class="t1" style="margin-top:3px">' + esc(b.t) + '</div></div>' +
+      '<button class="x" id="boardX" aria-label="Chiudi l\'avviso">×</button></div>';
+  }
+
+  // ------------------------------------------------------------ cosa è cambiato (solo per chi ha scelto «Chi sei?»)
+  // I miei turni e servizi da oggi in poi, confrontati con quelli visti l'ultima volta su questo telefono.
+  function mySet() {
+    var today = key(new Date()), out = {};
+    list(data.shifts).forEach(function (s) { if (s.p === me && keyOf(s.d) >= today) out['T|' + s.d + '|' + s.t] = 1; });
+    list(data.services).forEach(function (s) { if (s.p === me && keyOf(s.d) >= today) out['S|' + s.d + '|' + s.s + '|' + (s.h || '')] = 1; });
+    return out;
+  }
+  function seenKey() { return 'tm_seen_' + KEY + '_' + me; }
+  function changes() {
+    if (!me || !data || DEMO) return null;
+    var saved = null;
+    try { saved = JSON.parse(store(seenKey()) || 'null'); } catch (e) { }
+    var cur = mySet();
+    if (!saved || typeof saved !== 'object') { store(seenKey(), JSON.stringify(cur)); return null; }   // prima visita: si parte da qui
+    var today = key(new Date()), added = [], removed = [];
+    Object.keys(cur).forEach(function (k) { if (!saved[k]) added.push(k); });
+    Object.keys(saved).forEach(function (k) { if (!cur[k] && keyOf(k.split('|')[1]) >= today) removed.push(k); });
+    return added.length || removed.length ? { added: added, removed: removed } : null;
+  }
+  function changedDays() {
+    var c = changes(), out = {};
+    if (c) c.added.concat(c.removed).forEach(function (k) { out[keyOf(k.split('|')[1])] = 1; });
+    return out;
+  }
+  function changeText(k) {
+    var p = k.split('|'), dt = parse(p[1]);
+    var when = dt ? GG[dt.getDay()] + ' ' + dt.getDate() + ' ' + MESI[dt.getMonth()].slice(0, 3) : p[1];
+    return when + ' · ' + (p[0] === 'T' ? TYPE[p[2]] || p[2] : p[2] + (p[3] ? ' ' + p[3] : ''));
+  }
+  function changesCard() {
+    var c = changes();
+    if (!c) return '';
+    var items = c.added.map(function (k) { return [k, '+']; }).concat(c.removed.map(function (k) { return [k, '−']; }));
+    items.sort(function (a, b) { return keyOf(a[0].split('|')[1]) - keyOf(b[0].split('|')[1]); });
+    var h = '<div class="changes"><div class="over" style="color:var(--warn)">Cosa è cambiato per te</div>';
+    items.slice(0, 8).forEach(function (it) {
+      h += '<div class="ln"><span class="sg" style="color:' + (it[1] === '+' ? 'var(--open)' : 'var(--danger)') + '">' + it[1] + '</span><span>' +
+        esc(changeText(it[0])) + (it[1] === '−' ? ' <span class="muted">(tolto)</span>' : '') + '</span></div>';
+    });
+    if (items.length > 8) h += '<div class="t2">e altri ' + (items.length - 8) + '</div>';
+    return h + '<button class="act line" id="seenBtn" style="margin-top:8px">Ho visto</button></div>';
+  }
+
   function pendingBanner() {
     if (!reqOn() || !me) return '';
     var n = myReqs.filter(function (r) { return r.stato === 'attesa'; }).length;
@@ -666,6 +733,8 @@ nav svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;st
     if (t.id === 'sendReq') { sendRequest(t); return; }
     if (t.dataset.withdraw) { withdrawRequest(t.dataset.withdraw, t); return; }
     if (t.id === 'sheetOk') { closeSheet(); render(); return; }
+    if (t.id === 'boardX') { store('tm_board_closed_' + KEY, String(data.board && data.board.id)); render(); return; }
+    if (t.id === 'seenBtn') { store(seenKey(), JSON.stringify(mySet())); render(); return; }
     if (t.id === 'widgetBtn') { widgetSheet(/iPhone|iPad|iPod/.test(navigator.userAgent) ? 'ios' : 'android'); return; }
     if (t.dataset.os) { widgetSheet(t.dataset.os); return; }
     if (t.dataset.copy) { copyThing(t.dataset.copy, t); return; }
